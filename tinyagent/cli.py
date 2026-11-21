@@ -1,11 +1,12 @@
-"""Command-line entry point and a deterministic example tool."""
+"""Command-line entry point and the default Issue-002 tool catalog."""
 
 import argparse
 
 from .agent import AgentLoop, AgentLimitError
+from .catalog import build_tool_registry
 from .config import ConfigError, load_config
 from .model import ModelClient
-from .tools import ToolDefinition, ToolRegistry
+from .tools import ToolDefinition
 
 
 def main() -> int:
@@ -17,20 +18,8 @@ def main() -> int:
     except ConfigError as exc:
         print(f"Configuration error: {exc}")
         return 2
-    registry = ToolRegistry()
-    registry.register(
-        ToolDefinition(
-            name="echo",
-            description="Return the supplied text.",
-            parameters={
-                "type": "object",
-                "properties": {"text": {"type": "string", "description": "Text to return"}},
-                "required": ["text"],
-                "additionalProperties": False,
-            },
-            handler=lambda text: text,
-        )
-    )
+    registry = build_tool_registry()
+    registry.register(ToolDefinition(name="echo", description="Return the supplied text.", parameters={"type": "object", "properties": {"text": {"type": "string", "description": "Text to return"}}, "required": ["text"], "additionalProperties": False}, handler=lambda text: text))
     message = args.message or input("You: ")
     try:
         answer = AgentLoop(ModelClient(config), registry).run(message)
@@ -39,5 +28,4 @@ def main() -> int:
         return 1
     print(answer)
     return 0
-
 

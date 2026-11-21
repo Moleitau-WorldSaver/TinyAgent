@@ -1,7 +1,7 @@
 """Registered tool definitions, validation, and safe execution."""
 
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-import inspect
 import json
 from typing import Any, Callable
 
@@ -25,14 +25,7 @@ class ToolRegistry:
 
     def schemas(self) -> list[dict[str, Any]]:
         return [
-            {
-                "type": "function",
-                "function": {
-                    "name": definition.name,
-                    "description": definition.description,
-                    "parameters": definition.parameters,
-                },
-            }
+            {"type": "function", "function": {"name": definition.name, "description": definition.description, "parameters": definition.parameters}}
             for definition in self._tools.values()
         ]
 
@@ -49,6 +42,14 @@ class ToolRegistry:
             return json.dumps({"error": f"Tool {name} failed: {exc}"})
         return _serialize_result(result)
 
+    def execute_many(self, calls: list[tuple[str, dict[str, Any]]]) -> list[str]:
+        """Execute calls concurrently and return results in the input order."""
+        if not calls:
+            return []
+        with ThreadPoolExecutor(max_workers=len(calls)) as executor:
+            futures = [executor.submit(self.execute, name, arguments) for name, arguments in calls]
+            return [future.result() for future in futures]
+
 
 def _serialize_result(result: Any) -> str:
     try:
@@ -60,8 +61,7 @@ def _serialize_result(result: Any) -> str:
 def _validate_arguments(schema: dict[str, Any], arguments: Any) -> str | None:
     if not isinstance(arguments, dict):
         return "Tool arguments must be a JSON object."
-    required = schema.get("required", [])
-    missing = [name for name in required if name not in arguments]
+    missing = [name for name in schema.get("required", []) if name not in arguments]
     if missing:
         return f"Missing required argument(s): {', '.join(missing)}"
     properties = schema.get("properties", {})
@@ -76,14 +76,5 @@ def _validate_arguments(schema: dict[str, Any], arguments: Any) -> str | None:
 
 
 def _matches_type(value: Any, expected: str) -> bool:
-    return {
-        "string": isinstance(value, str),
-        "integer": isinstance(value, int) and not isinstance(value, bool),
-        "number": isinstance(value, (int, float)) and not isinstance(value, bool),
-        "boolean": isinstance(value, bool),
-        "object": isinstance(value, dict),
-        "array": isinstance(value, list),
-        "null": value is None,
-    }.get(expected, True)
-
+    return {"string": isinstance(value, str), "integer": isinstance(value, int) and not isinstance(value, bool), "number": isinstance(value, (int, float)) and not isinstance(value, bool), "boolean": isinstance(value, bool), "object": isinstance(value, dict), "array": isinstance(value, list), "null": value is None}.get(expected, True)
 

@@ -1,6 +1,7 @@
 """The synchronous model/tool decision loop."""
 
 import copy
+import json
 from typing import Protocol
 
 from .models import ModelResponse
@@ -29,32 +30,20 @@ class AgentLoop:
             response = self.model.complete(copy.deepcopy(messages), self.tools.schemas())
             assistant_message: dict = {"role": "assistant", "content": response.content}
             if response.tool_calls:
-                assistant_message["tool_calls"] = [
-                    {
-                        "id": call.id,
-                        "type": "function",
-                        "function": {"name": call.name, "arguments": _json_arguments(call.arguments)},
-                    }
-                    for call in response.tool_calls
-                ]
+                assistant_message["tool_calls"] = [{"id": call.id, "type": "function", "function": {"name": call.name, "arguments": json.dumps(call.arguments, ensure_ascii=False)}} for call in response.tool_calls]
             messages.append(assistant_message)
             if not response.tool_calls:
                 return response.content or ""
+            unique_calls = []
+            seen_ids: set[str] = set()
             for call in response.tool_calls:
-                messages.append(
-                    {
-                        "role": "tool",
-                        "tool_call_id": call.id,
-                        "name": call.name,
-                        "content": self.tools.execute(call.name, call.arguments),
-                    }
-                )
+                if call.id in seen_ids:
+                    unique_calls.append((call.name, {"__duplicate_call_id__": call.id}))
+                else:
+                    seen_ids.add(call.id)
+                    unique_calls.append((call.name, call.arguments))
+            results = self.tools.execute_many(unique_calls)
+            for call, result in zip(response.tool_calls, results):
+                messages.append({"role": "tool", "tool_call_id": call.id, "name": call.name, "content": result})
         raise AgentLimitError(f"Agent stopped after reaching the {self.max_rounds}-round limit.")
-
-
-def _json_arguments(arguments: dict) -> str:
-    import json
-
-    return json.dumps(arguments, ensure_ascii=False)
-
 

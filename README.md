@@ -18,10 +18,10 @@ Edit `.tinyagent.toml` with a local API key and model. The file is ignored by Gi
 
 ```bash
 python -m tinyagent.cli "Say hello"
-tinyagent "Use the echo tool when appropriate"
+tinyagent "Use the calculator tool when appropriate"
 ```
 
-The included `echo` tool demonstrates the full path. The model receives the user message and registered tool schemas, the loop validates and executes structured calls, appends each tool result to the conversation, and continues until the model returns text or 50 decision rounds are reached.
+The default catalog includes `bash`, `read`, `edit`, `write`, `calculator`, `search`, `read_docs`, `todo`, and `weather`. The first four are side-effect-free simulations. Search and weather use replaceable offline providers by default. `read_docs` is bounded to `docs/`. Multiple tool calls run concurrently and their results are written back in the model's original order. The `echo` tool remains available in the CLI as a compatibility example.
 
 ## Test
 
@@ -29,10 +29,9 @@ The included `echo` tool demonstrates the full path. The model receives the user
 python -m unittest discover -s tests -v
 ```
 
-Tests use a fake model and deterministic tools, so they never need a real API key or network access. Unknown tools, invalid arguments, tool failures, direct text responses, multi-step calls, configuration errors, and the round limit are covered.
+Tests use a fake model and deterministic tools, so they never need a real API key or network access. They cover the catalog schemas, mock providers, docs boundary, calculator, parallel calls, unknown tools, invalid arguments, tool failures, direct text responses, multi-step calls, configuration errors, and the round limit.
 
 ## Scope
 
-This first version deliberately leaves streaming, parallel tool calls, persistence, RAG, web UI, retries, permissions, and multi-agent orchestration for later issues.
-
+This version deliberately leaves streaming, persistence, RAG, web UI, retries, permissions, and multi-agent orchestration for later issues. Bash, edit, and write do not perform real side effects.
 
