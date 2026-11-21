@@ -1,6 +1,6 @@
 """The synchronous model/tool decision loop."""
 
-from dataclasses import asdict
+import copy
 from typing import Protocol
 
 from .models import ModelResponse
@@ -26,7 +26,7 @@ class AgentLoop:
     def run(self, user_input: str) -> str:
         messages: list[dict] = [{"role": "user", "content": user_input}]
         for _ in range(self.max_rounds):
-            response = self.model.complete(messages, self.tools.schemas())
+            response = self.model.complete(copy.deepcopy(messages), self.tools.schemas())
             assistant_message: dict = {"role": "assistant", "content": response.content}
             if response.tool_calls:
                 assistant_message["tool_calls"] = [
