@@ -4,6 +4,7 @@ from .agent import AgentLoop, AgentLimitError
 from .catalog import build_tool_registry
 from .config import Config, ConfigError, load_config
 from .models import ModelResponse, ToolCall
+from .model import DeepSeekModelClient, ModelClient
 from .providers import MockSearchProvider, MockWeatherProvider
 from .tools import ToolDefinition, ToolRegistry
 
@@ -19,6 +20,8 @@ __all__ = [
     "ToolDefinition",
     "ToolRegistry",
     "build_tool_registry",
+    "DeepSeekModelClient",
     "load_config",
+    "ModelClient",
 ]
 

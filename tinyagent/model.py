@@ -1,4 +1,4 @@
-"""OpenAI-compatible HTTP model adapter using only the Python standard library."""
+"""OpenAI-compatible HTTP model adapters using only the standard library."""
 
 import json
 from urllib import request
@@ -12,7 +12,8 @@ class ModelClient:
         self.config = config
 
     def complete(self, messages: list[dict], tools: list[dict]) -> ModelResponse:
-        payload = json.dumps({"model": self.config.model, "messages": messages, "tools": tools}).encode()
+        body = self._request_body(messages, tools)
+        payload = json.dumps(body, ensure_ascii=False).encode("utf-8")
         http_request = request.Request(
             f"{self.config.base_url}/chat/completions",
             data=payload,
@@ -20,7 +21,13 @@ class ModelClient:
             method="POST",
         )
         with request.urlopen(http_request, timeout=self.config.timeout_seconds) as response:
-            body = json.loads(response.read().decode("utf-8"))
+            response_body = json.loads(response.read().decode("utf-8"))
+        return self._parse_response(response_body)
+
+    def _request_body(self, messages: list[dict], tools: list[dict]) -> dict:
+        return {"model": self.config.model, "messages": messages, "tools": tools}
+
+    def _parse_response(self, body: dict) -> ModelResponse:
         message = body["choices"][0]["message"]
         calls = [
             ToolCall(
@@ -30,7 +37,23 @@ class ModelClient:
             )
             for index, call in enumerate(message.get("tool_calls", []), start=1)
         ]
-        return ModelResponse(content=message.get("content"), tool_calls=calls)
+        return ModelResponse(
+            content=message.get("content"),
+            tool_calls=calls,
+            reasoning_content=message.get("reasoning_content"),
+        )
+
+
+class DeepSeekModelClient(ModelClient):
+    """DeepSeek Chat Completions adapter with thinking enabled."""
+
+    def _request_body(self, messages: list[dict], tools: list[dict]) -> dict:
+        return {
+            "model": self.config.model,
+            "messages": messages,
+            "tools": tools,
+            "thinking": {"type": "enabled"},
+        }
 
 
 def _parse_arguments(raw: str | dict) -> dict:

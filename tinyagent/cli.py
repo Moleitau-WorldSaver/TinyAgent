@@ -5,7 +5,7 @@ import argparse
 from .agent import AgentLoop, AgentLimitError
 from .catalog import build_tool_registry
 from .config import ConfigError, load_config
-from .model import ModelClient
+from .model import DeepSeekModelClient, ModelClient
 from .tools import ToolDefinition
 
 
@@ -22,7 +22,8 @@ def main() -> int:
     registry.register(ToolDefinition(name="echo", description="Return the supplied text.", parameters={"type": "object", "properties": {"text": {"type": "string", "description": "Text to return"}}, "required": ["text"], "additionalProperties": False}, handler=lambda text: text))
     message = args.message or input("You: ")
     try:
-        answer = AgentLoop(ModelClient(config), registry).run(message)
+        model = DeepSeekModelClient(config) if config.provider == "deepseek" else ModelClient(config)
+        answer = AgentLoop(model, registry).run(message)
     except (AgentLimitError, OSError, ValueError, KeyError) as exc:
         print(f"Agent error: {exc}")
         return 1

@@ -50,6 +50,19 @@ class AgentLoopTests(unittest.TestCase):
         self.assertEqual(model.calls[1][0][-1]["role"], "tool")
         self.assertIn("5", model.calls[1][0][-1]["content"])
 
+    def test_reasoning_content_is_preserved_for_follow_up_turns(self):
+        model = FakeModel(
+            [
+                ModelResponse(
+                    reasoning_content="I should use the calculator.",
+                    tool_calls=[ToolCall("call-1", "add", {"left": 2, "right": 3})],
+                ),
+                ModelResponse(content="The answer is five."),
+            ]
+        )
+        self.assertEqual(AgentLoop(model, registry()).run("calculate"), "The answer is five.")
+        self.assertEqual(model.calls[1][0][1]["reasoning_content"], "I should use the calculator.")
+
     def test_unknown_tool_and_bad_arguments_are_model_visible(self):
         model = FakeModel(
             [

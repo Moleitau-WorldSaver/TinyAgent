@@ -16,6 +16,7 @@ class Config:
     base_url: str
     model: str
     timeout_seconds: int = 60
+    provider: str = "openai_compatible"
 
 
 def load_config(path: str | Path = ".tinyagent.toml") -> Config:
@@ -29,12 +30,15 @@ def load_config(path: str | Path = ".tinyagent.toml") -> Config:
     api_key = os.getenv("TINYAGENT_API_KEY", str(values.get("api_key", "")))
     base_url = os.getenv("TINYAGENT_BASE_URL", str(values.get("base_url", "https://api.openai.com/v1")))
     model = os.getenv("TINYAGENT_MODEL", str(values.get("model", "")))
+    provider = os.getenv("TINYAGENT_PROVIDER", str(values.get("provider", "openai_compatible")))
     timeout_value = os.getenv("TINYAGENT_TIMEOUT_SECONDS", str(values.get("timeout_seconds", 60)))
 
     if not api_key or api_key == "your-api-key":
         raise ConfigError("API key is missing. Copy config.example.toml to .tinyagent.toml and set api_key.")
     if not model:
         raise ConfigError("Model is missing. Set model in .tinyagent.toml or TINYAGENT_MODEL.")
+    if provider not in {"openai_compatible", "deepseek"}:
+        raise ConfigError("provider must be openai_compatible or deepseek.")
     try:
         timeout_seconds = int(timeout_value)
     except ValueError as exc:
@@ -42,6 +46,12 @@ def load_config(path: str | Path = ".tinyagent.toml") -> Config:
     if timeout_seconds <= 0:
         raise ConfigError("timeout_seconds must be greater than zero.")
 
-    return Config(api_key=api_key, base_url=base_url.rstrip("/"), model=model, timeout_seconds=timeout_seconds)
+    return Config(
+        api_key=api_key,
+        base_url=base_url.rstrip("/"),
+        model=model,
+        timeout_seconds=timeout_seconds,
+        provider=provider,
+    )
 
 

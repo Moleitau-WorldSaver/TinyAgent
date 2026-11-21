@@ -25,6 +25,24 @@ class ConfigTests(unittest.TestCase):
             self.assertEqual(config.api_key, "test-key")
             self.assertEqual(config.model, "test-model")
             self.assertEqual(config.timeout_seconds, 10)
+            self.assertEqual(config.provider, "openai_compatible")
+
+    def test_deepseek_provider_configuration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.toml"
+            path.write_text(
+                'provider = "deepseek"\napi_key = "test-key"\nmodel = "deepseek-chat"\n',
+                encoding="utf-8",
+            )
+            config = load_config(path)
+            self.assertEqual(config.provider, "deepseek")
+
+    def test_unknown_provider_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.toml"
+            path.write_text('provider = "unknown"\napi_key = "test-key"\nmodel = "test-model"\n', encoding="utf-8")
+            with self.assertRaisesRegex(ConfigError, "provider must be"):
+                load_config(path)
 
 
 if __name__ == "__main__":
