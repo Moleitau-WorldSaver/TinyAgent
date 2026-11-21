@@ -30,6 +30,8 @@ class AgentLoop:
             response = self.model.complete(copy.deepcopy(messages), self.tools.schemas())
             calls = _unique_calls(response.tool_calls)
             assistant_message: dict = {"role": "assistant", "content": response.content}
+            if response.reasoning_content:
+                assistant_message["reasoning_content"] = response.reasoning_content
             if calls:
                 assistant_message["tool_calls"] = [{"id": call.id, "type": "function", "function": {"name": call.name, "arguments": json.dumps(call.arguments, ensure_ascii=False)}} for call in calls]
             messages.append(assistant_message)
